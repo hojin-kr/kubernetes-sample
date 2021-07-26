@@ -8,7 +8,7 @@ kubernetes sample
 ## 과정
 1. sets up a local Kubernetes 
    1. minikube
-   2. kubernetes 정의 
+   2. Writing Deployment.yaml
    3. 배포및 스케일링
    4. 추가 배포및 배포간 전환
    5. 지속 배포 (github Action)
@@ -18,9 +18,10 @@ kubernetes sample
       1. test
    3. AWS EKS
 
-## sets up a local Kubernetes 
-sets up a local Kubernetes cluster 
-(minikube)[https://minikube.sigs.k8s.io/docs/]
+## sets up a local Kubernetes
+### [minikube](https://minikube.sigs.k8s.io/docs/)
+#### Running [minikube](https://minikube.sigs.k8s.io/docs/)
+[minikube](https://minikube.sigs.k8s.io/docs/) sets up a local Kubernetes cluster 
 ```
 ➜  ~ brew install minikube
 Updating Homebrew...
@@ -33,3 +34,22 @@ Updating Homebrew...
 🚜  Pulling base image ...
 💾  Downloading Kubernetes v1.21.2 preload ...
 ```
+#### Checking kubernetes Cluster & Nodes
+```
+➜  ~ kubectl get all
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   4m37s
+```
+Or
+```
+➜  ~ minikube dashboard
+🔌  Enabling dashboard ...
+    ▪ Using image kubernetesui/dashboard:v2.1.0
+    ▪ Using image kubernetesui/metrics-scraper:v1.0.4
+🤔  Verifying dashboard health ...
+🚀  Launching proxy ...
+🤔  Verifying proxy health ...
+🎉  Opening http://127.0.0.1:57142/api/v1/namespaces/kubernetes-dashboard/services/http:kubernetes-dashboard:/proxy/ in your default browser...
+
+```
+### Writing Deployment.yaml 
