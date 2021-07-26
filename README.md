@@ -9,8 +9,7 @@ kubernetes sample
 1. sets up a local Kubernetes 
    1. minikube
    2. Writing Deployment.yaml
-   3. 배포및 스케일링
-   4. 추가 배포및 배포간 전환
+   3. 배포
    5. 지속 배포 (github Action)
 
 2. 상용 클라우드 시스템에서 배포
@@ -54,8 +53,12 @@ Or
 ```
 ### Writing Deployment
 Namespace - Deployment - Service - Ingress
+
 ![image](https://user-images.githubusercontent.com/22079767/127005978-500172a5-c646-4ece-96a0-479ca243e329.png)
+https://kubernetes.io/docs/concepts/services-networking/ingress/
+
 #### Namespace.yaml
+Deploy by defining namespace to manage multiple deployments
 ```
 ➜  kubetuto kubectl apply -f namespace.yaml 
 namespace/app1 created
@@ -153,18 +156,61 @@ metadata:
   namespace: app1
 spec:
   selector:
-    app: app1-service
+    app: app1
   ports:
   - port: 80
     targetPort: 80
 ```
+### minikube local에서 service로 노출
+로컬에서 minikube로 테스트시 DNS 연결 및 Ingress 테스팅이 어렵기 때문에 minikube의 service 기능으로 service르 로컬에 노출시켜 deploeyment의 Pod에 접근 테스트가 가능하다
+```
+➜  kubetuto minikube service app1-service --namespace app1
+|-----------|--------------|-------------|--------------|
+| NAMESPACE |     NAME     | TARGET PORT |     URL      |
+|-----------|--------------|-------------|--------------|
+| app1      | app1-service |             | No node port |
+|-----------|--------------|-------------|--------------|
+😿  service app1/app1-service has no node port
+🏃  Starting tunnel for service app1-service.
+|-----------|--------------|-------------|------------------------|
+| NAMESPACE |     NAME     | TARGET PORT |          URL           |
+|-----------|--------------|-------------|------------------------|
+| app1      | app1-service |             | http://127.0.0.1:59207 |
+|-----------|--------------|-------------|------------------------|
+🎉  Opening service app1/app1-service in default browser...
+❗  Because you are using a Docker driver on darwin, the terminal needs to be open to run it.
+```
+#### sercret.yaml
+for tls ingress 
+https://kubernetes.io/ko/docs/concepts/configuration/secret/
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-tls-ingress
+type: kubernetes.io/tls
+data:
+  tls.crt: |
+
+  tls.key: |
+
+```
 #### Ingress.yaml
 ```
-➜  kubetuto kubectl apply -f ingress.yaml
-ingress.networking.k8s.io/app1-tls-ingress created
-➜  kubetuto kubectl get ingress --namespace app1
-NAME               CLASS    HOSTS            ADDRESS   PORTS     AGE
-app1-tls-ingress   <none>   hojintest.shop             80, 443   12s
+➜  kubetuto kubectl describe ingress app1-tls-ingress --namespace app1
+Name:             app1-tls-ingress
+Namespace:        app1
+Address:          
+Default backend:  default-http-backend:80 (<error: endpoints "default-http-backend" not found>)
+TLS:
+  secret-tls-ingress terminates hojintest.shop
+Rules:
+  Host            Path  Backends
+  ----            ----  --------
+  hojintest.shop  
+                  /   app1-service:80 (172.17.0.5:80,172.17.0.6:80,172.17.0.7:80 + 2 more...)
+Annotations:      <none>
+Events:           <none>
 ```
 ```
 apiVersion: networking.k8s.io/v1
@@ -190,3 +236,63 @@ spec:
               number: 80
 
 ```
+
+## 상용 클라우드 시스템에서 배포
+### GOOGLE GKE
+#### 클러스터 생성
+GUI 환경에서 클러스터 생성
+#### 생성하 클러스터로 CLI로 접근
+```
+gcloud container clusters get-credentials cluster-1 --zone us-central1-c --project fluid-axe-315707
+Fetching cluster endpoint and auth data.
+kubeconfig entry generated for cluster-1.
+```
+#### 배포
+minikube와 동일하게 배포 진행
+```
+kubectl get all --namespace app1
+NAME                              READY   STATUS    RESTARTS   AGE
+pod/deployment-5f5d7579f9-5w7pm   1/1     Running   0          32m
+pod/deployment-5f5d7579f9-5x2bt   1/1     Running   0          32m
+pod/deployment-5f5d7579f9-8cbrk   1/1     Running   0          32m
+pod/deployment-5f5d7579f9-9t2tv   1/1     Running   0          32m
+pod/deployment-5f5d7579f9-w5gf8   1/1     Running   0          32m
+
+NAME                   TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/app1-service   ClusterIP   10.8.4.250   <none>        80/TCP    32m
+
+NAME                         READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/deployment   5/5     5            5           32m
+
+NAME                                    DESIRED   CURRENT   READY   AGE
+replicaset.apps/deployment-5f5d7579f9   5         5         5       33m
+kubectl get ingress --namespace app1
+NAME               CLASS    HOSTS            ADDRESS   PORTS     AGE
+app1-tls-ingress   <none>   hojintest.shop             80, 443   25m
+```
+#### service까지 만들어지 상태, ingress를 통해 외부 노출및 확인
+![image](https://user-images.githubusercontent.com/22079767/127019529-ee141ca6-5bbe-4a51-8b69-bce44fb98304.png)
+![image](https://user-images.githubusercontent.com/22079767/127019685-1dd47f07-0418-4cb8-8ce8-17e1897bb2d8.png)
+
+#### tls 설정 없이 tls-ingress 진행시 에러 발생
+```
+xxx@cloudshell:~/test (xxx)$ kubectl describe ingress --namespace app1
+Name:             app1-tls-ingress
+Namespace:        app1
+Address:
+Default backend:  default-http-backend:80 (10.4.0.3:8080)
+TLS:
+  secret-tls-ingress terminates hojintest.shop
+Rules:
+  Host            Path  Backends
+  ----            ----  --------
+  hojintest.shop
+                  /   app1-service:80 (10.4.0.5:80,10.4.1.7:80,10.4.1.8:80 + 2 more...)
+Annotations:      <none>
+Events:
+  Type     Reason  Age                From                     Message
+  ----     ------  ----               ----                     -------
+  Normal   Sync    91s (x2 over 91s)  loadbalancer-controller  Scheduled for sync
+  Warning  Sync    3s (x12 over 34s)  loadbalancer-controller  Error syncing to GCP: error running load balancer syncing routine: error initializing translator env: secrets "secret-tls-ingress" not found
+```
+### temporaly delete tls testing
