@@ -1,0 +1,26 @@
+# Deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # deployment unique name
+  name: deployment
+  namespace: app1
+spec:
+  # Used for identification in other resources
+  selector:
+    matchLabels:
+      app: app1
+  # Define the number of pod replicase
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: app1
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+
+
