@@ -10,13 +10,12 @@ kubernetes sample
    1. minikube
    2. Writing Deployment.yaml
    3. 배포
-   5. 지속 배포 (github Action)
 
 2. 상용 클라우드 시스템에서 배포
    1. GOOGLE GKE
-      1. test
-   3. AWS EKS
-
+   2. AWS EKS
+  
+3. 지속 배포
 ## sets up a local Kubernetes
 ### [minikube](https://minikube.sigs.k8s.io/docs/)
 #### Running [minikube](https://minikube.sigs.k8s.io/docs/)
@@ -181,7 +180,7 @@ spec:
 ❗  Because you are using a Docker driver on darwin, the terminal needs to be open to run it.
 ```
 #### sercret.yaml
-for tls ingress 
+tls setting 을 위해 secret 키 작업이 필요함
 https://kubernetes.io/ko/docs/concepts/configuration/secret/
 ```
 apiVersion: v1
@@ -275,6 +274,7 @@ app1-tls-ingress   <none>   hojintest.shop             80, 443   25m
 ![image](https://user-images.githubusercontent.com/22079767/127019685-1dd47f07-0418-4cb8-8ce8-17e1897bb2d8.png)
 
 #### tls 설정 없이 tls-ingress 진행시 에러 발생
+인증키 작업을 해야함
 ```
 xxx@cloudshell:~/test (xxx)$ kubectl describe ingress --namespace app1
 Name:             app1-tls-ingress
@@ -295,4 +295,32 @@ Events:
   Normal   Sync    91s (x2 over 91s)  loadbalancer-controller  Scheduled for sync
   Warning  Sync    3s (x12 over 34s)  loadbalancer-controller  Error syncing to GCP: error running load balancer syncing routine: error initializing translator env: secrets "secret-tls-ingress" not found
 ```
-### temporaly delete tls testing
+### Temporarily remove TLS 임시로 TLS 제거하 ingress로 테스트
+```
+kubectl get ingress --namespace app1
+NAME               CLASS    HOSTS            ADDRESS        PORTS   AGE
+app1-tls-ingress   <none>   hojintest.shop   35.241.53.84   80      96s
+kubectl describe ingress --namespace app1
+Name:             app1-tls-ingress
+Namespace:        app1
+Address:          35.241.53.84
+Default backend:  default-http-backend:80 (10.4.0.3:8080)
+Rules:
+  Host            Path  Backends
+  ----            ----  --------
+  hojintest.shop
+                  /   app1-service:80 (10.4.0.5:80,10.4.1.7:80,10.4.1.8:80 + 2 more...)
+Annotations:      ingress.kubernetes.io/backends: {"k8s-be-32666--f2a7482a28656704":"Unknown","k8s1-f2a7482a-app1-app1-service-80-1bfc3ece":"Unknown"}
+                  ingress.kubernetes.io/forwarding-rule: k8s2-fr-c51oe7ax-app1-app1-tls-ingress-nl3oy06m
+                  ingress.kubernetes.io/target-proxy: k8s2-tp-c51oe7ax-app1-app1-tls-ingress-nl3oy06m
+                  ingress.kubernetes.io/url-map: k8s2-um-c51oe7ax-app1-app1-tls-ingress-nl3oy06m
+Events:
+  Type    Reason     Age                 From                     Message
+  ----    ------     ----                ----                     -------
+  Normal  Sync       34s                 loadbalancer-controller  UrlMap "k8s2-um-c51oe7ax-app1-app1-tls-ingress-nl3oy06m" created
+  Normal  Sync       32s                 loadbalancer-controller  TargetProxy "k8s2-tp-c51oe7ax-app1-app1-tls-ingress-nl3oy06m" created
+  Normal  Sync       27s                 loadbalancer-controller  ForwardingRule "k8s2-fr-c51oe7ax-app1-app1-tls-ingress-nl3oy06m" created
+  Normal  IPChanged  27s                 loadbalancer-controller  IP is now 35.241.53.84
+  Normal  Sync       26s (x4 over 100s)  loadbalancer-controller  Scheduled for sync
+```
+![image](https://user-images.githubusercontent.com/22079767/127023894-dafd90e1-5b0c-48e8-8dfb-73069679431f.png)
